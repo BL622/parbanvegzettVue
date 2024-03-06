@@ -17,7 +17,7 @@ export interface IApp {
     pozitívGomb: string;
     negatívGomb: string;
     válasz?: boolean;
-  }
+  };
 }
 
 export interface IOne {
@@ -26,15 +26,22 @@ export interface IOne {
 }
 
 export interface IMany {
-  id?: number; // PK
-  categoryId?: number; // FK
-  titleField?: string;
-  descField?: string;
-  dateField?: string;
-  boolField?: boolean;
-  priceField?: number;
-  imgField?: string;
-  category?: IOne;
+  _id?: number; // PK
+  kategoria_id?: number; // FK
+  cim?: string;
+  evjarat?: number;
+  km_allas?: number;
+  szim?: string;
+  uzemanyag?: string;
+  hengerurtartalom?: number;
+  teljesitmeny?: number;
+  serulesmentes?: boolean;
+  leiras?: string;
+  hirdetes_datum?: Date;
+  vetelar?: number;
+  kepek?: Array<string>;
+  hirdetes_kategoria?: IOne;
+  teljesitmeny_kw?: number;
 }
 
 export interface IOther {
@@ -85,11 +92,11 @@ export const useStore = defineStore({
       filter: "",
       selectedMany: [],
       selectedOne: [],
-      yesNoComp:{
+      yesNoComp: {
         kérdés: "Igen vagy nem?",
         pozitívGomb: "Igen",
-        negatívGomb: "Nem"
-      }
+        negatívGomb: "Nem",
+      },
     },
   }),
   getters: {},
@@ -98,7 +105,7 @@ export const useStore = defineStore({
       Loading.show();
       this.one.documents = [];
       api
-        .get("api/categories")
+        .get("api/hirdetesek")
         .then((res) => {
           Loading.hide();
           if (res?.data) {
@@ -110,11 +117,43 @@ export const useStore = defineStore({
         });
     },
 
+    async getAllCarsByCategory(kategoriaNev): Promise<void> {
+      Loading.show();
+      this.other.documents = [];
+      api
+        .get(`api/kategoriak/${kategoriaNev}/hirdetesek`)
+        .then((res) => {
+          Loading.hide();
+          if (res?.data) {
+            this.other.documents = res.data[0].kategoria_hirdetesei;
+          }
+        })
+        .catch((error) => {
+          ShowErrorWithNotify(error);
+        });
+    },
+
+    async getCategories() {
+      Loading.show();
+      this.many.documents = [];
+      api
+        .get("api/kategoriak")
+        .then((res) => {
+          Loading.hide();
+          if (res?.data) {
+            this.many.documents = res.data;
+          }
+        })
+        .catch((error) => {
+          ShowErrorWithNotify(error);
+        });
+    },
+
     async many_GetAll(): Promise<void> {
       Loading.show();
       this.many.documents = [];
       api
-        .get("api/advertisements")
+        .get("api/hirdetesek")
         .then((res) => {
           Loading.hide();
           if (res?.data) {
@@ -127,13 +166,15 @@ export const useStore = defineStore({
     },
 
     async many_GetById(): Promise<void> {
-      if (this.many?.document?.id) {
+      if (this.many?.document?._id) {
         Loading.show();
         api
-          .get(`api/advertisements/${this.many.document.id}`)
+          .get(`api/hirdetesek/${this.many.document._id}`)
           .then((res) => {
             Loading.hide();
             if (res?.data) {
+              res.data.hirdetes_datum = res.data.hirdetes_datum.slice(0, 10);
+              console.log(res.data.hirdetes_datum);
               this.many.document = res.data;
               // store startig data to PATCH method:
               Object.assign(this.many.documentOld, this.many.document);
@@ -150,7 +191,7 @@ export const useStore = defineStore({
         this.many.documents = [];
         // Loading.show();
         api
-          .get(`advertisements?_expand=category&q=${this.app.filter}`)
+          .get(`hirdetesek?_expand=category&q=${this.app.filter}`)
           .then((res) => {
             // Loading.hide();
             if (res?.data) {
@@ -164,7 +205,7 @@ export const useStore = defineStore({
     },
 
     async many_EditById(): Promise<void> {
-      if (this.many?.document?.id) {
+      if (this.many?.document?._id) {
         const diff: any = {};
         // the diff object only stores changed fields:
         Object.keys(this.many.document).forEach((k, i) => {
@@ -180,13 +221,13 @@ export const useStore = defineStore({
         } else {
           Loading.show();
           api
-            .patch(`api/advertisements/${this.many.document.id}`, diff)
+            .patch(`api/hirdetesek/${this.many.document._id}`, diff)
             .then((res) => {
               Loading.hide();
-              if (res?.data?.id) {
+              if (res?.data?._id) {
                 this.many_GetAll(); // refresh dataN with read all data again from backend
                 Notify.create({
-                  message: `Document with id=${res.data.id} has been edited successfully!`,
+                  message: `Document with id=${res.data._id} has been edited successfully!`,
                   color: "positive",
                 });
               }
@@ -199,15 +240,15 @@ export const useStore = defineStore({
     },
 
     async many_DeleteById(): Promise<void> {
-      if (this.many?.document?.id) {
+      if (this.many?.document?._id) {
         Loading.show();
         api
-          .delete(`api/advertisements/${this.many.document.id}`)
+          .delete(`api/hirdetesek/${this.many.document._id}`)
           .then(() => {
             Loading.hide();
             this.many_GetAll(); // refresh dataN with read all data again from backend
             Notify.create({
-              message: `Document with id=${this.many.document.id} has been deleted successfully!`,
+              message: `Document with id=${this.many.document._id} has been deleted successfully!`,
               color: "positive",
             });
           })
@@ -221,7 +262,7 @@ export const useStore = defineStore({
       if (this.many?.document) {
         Loading.show();
         api
-          .post("api/advertisements", this.many.document)
+          .post("api/hirdetesek", this.many.document)
           .then((res) => {
             Loading.hide();
             if (res?.data) {
